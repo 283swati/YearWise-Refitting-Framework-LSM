@@ -449,3 +449,113 @@ var F1Chart = ui.Chart.feature.byFeature(ROC, 'cutoff', 'f1_score')
   });
 print(F1Chart);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//**************************************************************************
+// ADDITIONAL EVALUATION: Conventional split vs. target-year forward test
+// Uses the SAME trained model (rfclass). Nothing above is modified.
+//**************************************************************************
+
+// ---- Reusable ROC/AUC function ----
+function evaluateROC(collection, tagName) {
+  var pos = collection.filter(ee.Filter.eq('landslide', 1));
+  var neg = collection.filter(ee.Filter.eq('landslide', 0));
+
+  var posScored = rfclass.reduceRegions({
+    collection: pos,
+    reducer: ee.Reducer.max().setOutputs(['classification']),
+    scale: 30
+  }).map(function(x) { return x.set('is_target', 1); });
+
+  var negScored = rfclass.reduceRegions({
+    collection: neg,
+    reducer: ee.Reducer.max().setOutputs(['classification']),
+    scale: 30
+  }).map(function(x) { return x.set('is_target', 0); });
+
+  var comb = posScored.merge(negScored);
+  
+  Export.table.toDrive({
+    collection: comb.select(['classification', 'is_target', 'Year']),
+    description: 'scored_' + tagName + '_' + endYear,
+    fileFormat: 'CSV'
+  });
+
+  var roc = ee.FeatureCollection(ee.List.sequence(0, 1, null, 100).map(function(cutoff) {
+    var t = comb.filter(ee.Filter.eq('is_target', 1));
+    var n = comb.filter(ee.Filter.eq('is_target', 0));
+    var TPR = ee.Number(t.filter(ee.Filter.gte('classification', cutoff)).size()).divide(t.size());
+    var TNR = ee.Number(n.filter(ee.Filter.lt('classification', cutoff)).size()).divide(n.size());
+    var FPR = ee.Number(1).subtract(TNR);
+    var TP = t.filter(ee.Filter.gte('classification', cutoff)).size();
+    var FN = t.filter(ee.Filter.lt('classification', cutoff)).size();
+    var FP = n.filter(ee.Filter.gte('classification', cutoff)).size();
+    var TN = n.filter(ee.Filter.lt('classification', cutoff)).size();
+    var accuracy  = ee.Number(TP).add(TN).divide(t.size().add(n.size()));
+    var precision = ee.Number(TP).divide(ee.Number(TP).add(FP));
+    var f1 = ee.Number(2).multiply(precision).multiply(TPR).divide(precision.add(TPR));
+    return ee.Feature(null, {
+      set: tagName, year: endYear, cutoff: cutoff,
+      TPR: TPR, FPR: FPR,
+      dist: TPR.subtract(1).pow(2).add(FPR.pow(2)).sqrt(),
+      TP: TP, TN: TN, FP: FP, FN: FN,
+      accuracy: accuracy, precision: precision, recall: TPR, f1_score: f1
+    });
+  }));
+
+  var X = ee.Array(roc.aggregate_array('FPR'));
+  var Y = ee.Array(roc.aggregate_array('TPR'));
+  var auc = X.slice(0, 1).subtract(X.slice(0, 0, -1))
+             .multiply(Y.slice(0, 1).add(Y.slice(0, 0, -1)))
+             .multiply(0.5).reduce('sum', [0]).abs();
+
+  print('--- ' + tagName + ' (' + endYear + ') ---');
+  print('   Positives:', pos.size(), ' Negatives:', neg.size());
+  print('   AUC:', auc);
+  print(ui.Chart.feature.byFeature(roc, 'FPR', 'TPR').setOptions({
+    title: 'ROC: ' + tagName + ' (' + endYear + ')',
+    hAxis: {title: 'False Positive Rate'},
+    vAxis: {title: 'True Positive Rate'},
+    lineWidth: 2
+  }));
+  return roc;
+}
+
+// ---- Bag A: conventional random 30% split (both classes, historical only) ----
+var bagA = testingHistorical;
+
+// ---- Bag B: target-year landslides + held-out non-landslide points ----
+var heldOutNegatives = testingHistorical.filter(ee.Filter.eq('landslide', 0));
+var bagB = currentYearDataClean.merge(heldOutNegatives);
+
+var rocA = evaluateROC(bagA, 'A_conventional');
+var rocB = evaluateROC(bagB, 'B_targetyear');
+
+// ---- Export both ROC tables so you can plot one combined figure ----
+Export.table.toDrive({
+  collection: rocA.merge(rocB),
+  description: 'ROC_comparison_' + endYear,
+  fileFormat: 'CSV'
+});
+
+

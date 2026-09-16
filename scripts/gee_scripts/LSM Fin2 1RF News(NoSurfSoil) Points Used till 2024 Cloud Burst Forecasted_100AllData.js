@@ -10,8 +10,8 @@ var combinedDEMTile = ee.Image('projects/ee-ce23resch11016/assets/merged_cdnc43d
 
 print('DEM Metadata:', combinedDEMTile.getInfo());
 
-var endYear = 2024;
-print('Year:', endYear);
+var endYear = 2025;
+print('Year:', endYear)
 
 // Calculate elevation, slope, and aspect from the mosaicked DEM
 //var elevation = combinedDEMTile; // Define the elevation from the SRTM dataset
@@ -515,14 +515,20 @@ for (var i = 0; i < numDays; i++) {
 //Exported Interpolated NASA SMAP Global Soil Moisture 3 hourly data into daily mean data
 //and then using it again as asset, for efficiency.
 // Function to load and clip mean surface soil moisture data for a specific year
-function getMeanSurfaceSoilMoisture(year) {
-  var soilMoisture = ee.Image('projects/ee-ce23resch11016/assets/SMAP_AnnualMean/Annual_SMAP_Mean_Year_' + year).select('sm_surface');
-  return soilMoisture.clip(wayanad);
-}
+// function getMeanSurfaceSoilMoisture(year) {
+//   var soilMoisture = ee.Image('projects/ee-ce23resch11016/assets/SMAP_AnnualMean/Annual_SMAP_Mean_Year_' + year).select('sm_surface');
+//   return soilMoisture.clip(wayanad);
+// }
 
 // Function to load and clip mean rootzone soil moisture data for a specific year
 function getMeanRootSoilMoisture(year) {
-  var soilMoisture = ee.Image('projects/ee-ce23resch11016/assets/SMAP_AnnualMean/Annual_SMAP_Mean_Year_' + year).select('sm_rootzone');
+  var imageName;
+  if (year >= 2025) {
+    imageName = 'projects/ee-ce23resch11016/assets/SMAP_AnnualMean/Annual_SMAP_Mean_Year_' + year + '_FORECASTED';
+  } else {
+    imageName = 'projects/ee-ce23resch11016/assets/SMAP_AnnualMean/Annual_SMAP_Mean_Year_' + year;
+  }
+  var soilMoisture = ee.Image(imageName).select('sm_rootzone');
   return soilMoisture.clip(wayanad);
 }
 
@@ -530,13 +536,13 @@ function getMeanRootSoilMoisture(year) {
 var years = [endYear-3,endYear-2,endYear-1,endYear];
 print(years)
 
-// Combine surface soil moisture data for all years
-var surfaceSoilMoistureImages = years.map(function(year) {
-  return getMeanSurfaceSoilMoisture(year);
-});
+// // Combine surface soil moisture data for all years
+// var surfaceSoilMoistureImages = years.map(function(year) {
+//   return getMeanSurfaceSoilMoisture(year);
+// });
 
-// Compute the average surface soil moisture across all years
-var surfaceSoilMoistureAllYears = ee.ImageCollection(surfaceSoilMoistureImages).mean().rename('surface_soil_moisture');
+// // Compute the average surface soil moisture across all years
+// var surfaceSoilMoistureAllYears = ee.ImageCollection(surfaceSoilMoistureImages).mean().rename('surface_soil_moisture');
 
 // Combine rootzone soil moisture data for all years
 var rootzoneSoilMoistureImages = years.map(function(year) {
@@ -546,13 +552,13 @@ var rootzoneSoilMoistureImages = years.map(function(year) {
 // Compute the average rootzone soil moisture across all years
 var rootzoneSoilMoistureAllYears = ee.ImageCollection(rootzoneSoilMoistureImages).mean().rename('rootzone_soil_moisture');
 
-// Calculate min and max for surface soil moisture (all years)
-var surfaceStatsAllYears = surfaceSoilMoistureAllYears.reduceRegion({
-  reducer: ee.Reducer.minMax(),
-  geometry: wayanad,
-  scale: scale, // Adjust scale based on dataset resolution
-  maxPixels: 1e9
-});
+// // Calculate min and max for surface soil moisture (all years)
+// var surfaceStatsAllYears = surfaceSoilMoistureAllYears.reduceRegion({
+//   reducer: ee.Reducer.minMax(),
+//   geometry: wayanad,
+//   scale: scale, // Adjust scale based on dataset resolution
+//   maxPixels: 1e9
+// });
 
 // Calculate min and max for rootzone soil moisture (all years)
 var rootzoneStatsAllYears = rootzoneSoilMoistureAllYears.reduceRegion({
@@ -563,15 +569,15 @@ var rootzoneStatsAllYears = rootzoneSoilMoistureAllYears.reduceRegion({
 });
 
 // Print the statistics
-print('Surface Soil Moisture Min/Max:', surfaceStatsAllYears);
+// print('Surface Soil Moisture Min/Max:', surfaceStatsAllYears);
 print('Rootzone Soil Moisture Min/Max:', rootzoneStatsAllYears);
 
-// Visualization parameters for surface soil moisture
-var surfaceSoilMoistureVis = {
-  min: 0.2312639206647873, // Adjust based on the calculated range
-  max: 0.3281596004962921, // Adjust based on the calculated range
-  palette: ['blue', 'cyan', 'green', 'yellow', 'orange', 'red'] // Enhanced palette
-};
+// // Visualization parameters for surface soil moisture
+// var surfaceSoilMoistureVis = {
+//   min: 0.2312639206647873, // Adjust based on the calculated range
+//   max: 0.3281596004962921, // Adjust based on the calculated range
+//   palette: ['blue', 'cyan', 'green', 'yellow', 'orange', 'red'] // Enhanced palette
+// };
 
 // Visualization parameters for rootzone soil moisture
 var rootzoneSoilMoistureVis = {
@@ -580,27 +586,27 @@ var rootzoneSoilMoistureVis = {
   palette: ['#0000FF', '#00FFFF', '#00FF00', '#FFFF00', '#FFA500', '#FF0000'] // Enhanced palette
 };
 
-// Add mean surface soil moisture layer to the map
-Map.addLayer(surfaceSoilMoistureAllYears.clip(wayanad), surfaceSoilMoistureVis, 'Mean Surface Soil Moisture', false);
+// // Add mean surface soil moisture layer to the map
+// Map.addLayer(surfaceSoilMoistureAllYears.clip(wayanad), surfaceSoilMoistureVis, 'Mean Surface Soil Moisture', false);
 
 // Add mean rootzone soil moisture layer to the map
 Map.addLayer(rootzoneSoilMoistureAllYears.clip(wayanad), rootzoneSoilMoistureVis, 'Mean Rootzone Soil Moisture', false);
 
-// Define min and max values for normalization (Surface Soil Moisture)
-var minSurfaceSoilMoisture = 0.19790348410606384;  // Minimum surface soil moisture (2020–2023)
-var maxSurfaceSoilMoisture = 0.30830562114715576;  // Maximum surface soil moisture (2020–2023)
+// // Define min and max values for normalization (Surface Soil Moisture)
+// var minSurfaceSoilMoisture = 0.19790348410606384;  // Minimum surface soil moisture (2020–2023)
+// var maxSurfaceSoilMoisture = 0.30830562114715576;  // Maximum surface soil moisture (2020–2023)
 
-// Normalize the surface soil moisture
-var normalizedSurfaceSoilMoisture = surfaceSoilMoistureAllYears.subtract(minSurfaceSoilMoisture)
-  .divide(maxSurfaceSoilMoisture - minSurfaceSoilMoisture);
+// // Normalize the surface soil moisture
+// var normalizedSurfaceSoilMoisture = surfaceSoilMoistureAllYears.subtract(minSurfaceSoilMoisture)
+//   .divide(maxSurfaceSoilMoisture - minSurfaceSoilMoisture);
 
-// Classify normalized surface soil moisture into categories
-var surfaceSoilMoistureClasses = ee.Image(0)
-  .where(normalizedSurfaceSoilMoisture.lt(0.2), 1)  // Very dry (Blue): 0.0 - 0.2
-  .where(normalizedSurfaceSoilMoisture.gte(0.2).and(normalizedSurfaceSoilMoisture.lt(0.4)), 2)  // Dry (Cyan): 0.2 - 0.4
-  .where(normalizedSurfaceSoilMoisture.gte(0.4).and(normalizedSurfaceSoilMoisture.lt(0.6)), 3)  // Moderate moisture (Green): 0.4 - 0.6
-  .where(normalizedSurfaceSoilMoisture.gte(0.6).and(normalizedSurfaceSoilMoisture.lt(0.8)), 4)  // Wet (Yellow): 0.6 - 0.8
-  .where(normalizedSurfaceSoilMoisture.gte(0.8), 5);  // Very wet (Orange/Red): 0.8 - 1.0
+// // Classify normalized surface soil moisture into categories
+// var surfaceSoilMoistureClasses = ee.Image(0)
+//   .where(normalizedSurfaceSoilMoisture.lt(0.2), 1)  // Very dry (Blue): 0.0 - 0.2
+//   .where(normalizedSurfaceSoilMoisture.gte(0.2).and(normalizedSurfaceSoilMoisture.lt(0.4)), 2)  // Dry (Cyan): 0.2 - 0.4
+//   .where(normalizedSurfaceSoilMoisture.gte(0.4).and(normalizedSurfaceSoilMoisture.lt(0.6)), 3)  // Moderate moisture (Green): 0.4 - 0.6
+//   .where(normalizedSurfaceSoilMoisture.gte(0.6).and(normalizedSurfaceSoilMoisture.lt(0.8)), 4)  // Wet (Yellow): 0.6 - 0.8
+//   .where(normalizedSurfaceSoilMoisture.gte(0.8), 5);  // Very wet (Orange/Red): 0.8 - 1.0
 
 // Define min and max values for normalization (Rootzone Soil Moisture)
 var minRootzoneSoilMoisture = 0.23429709672927856;  // Minimum rootzone soil moisture (2020–2023)
@@ -618,18 +624,18 @@ var rootzoneSoilMoistureClasses = ee.Image(0)
   .where(normalizedRootzoneSoilMoisture.gte(0.6).and(normalizedRootzoneSoilMoisture.lt(0.8)), 4)  // Wet (Yellow): 0.6 - 0.8
   .where(normalizedRootzoneSoilMoisture.gte(0.8), 5);  // Very wet (Orange/Red): 0.8 - 1.0
 
-// Visualization parameters for classified surface soil moisture
-var classifiedSurfaceVis = {
-  min: 1,
-  max: 5,
-  palette: ['blue', 'cyan', 'green', 'yellow', 'orange', 'red'], // Enhanced palette
-  // Categories:
-  // 1: Blue (Very Dry)
-  // 2: Cyan (Dry)
-  // 3: Green (Moderate)
-  // 4: Yellow (Wet)
-  // 5: Orange/Red (Very Wet)
-};
+// // Visualization parameters for classified surface soil moisture
+// var classifiedSurfaceVis = {
+//   min: 1,
+//   max: 5,
+//   palette: ['blue', 'cyan', 'green', 'yellow', 'orange', 'red'], // Enhanced palette
+//   // Categories:
+//   // 1: Blue (Very Dry)
+//   // 2: Cyan (Dry)
+//   // 3: Green (Moderate)
+//   // 4: Yellow (Wet)
+//   // 5: Orange/Red (Very Wet)
+// };
 
 // Visualization parameters for classified rootzone soil moisture
 var classifiedRootzoneVis = {
@@ -644,20 +650,20 @@ var classifiedRootzoneVis = {
   // 5: #FFA500/#FF0000 (Orange/Red - Very Wet)
 };
 
-// Add classified surface soil moisture layer
-Map.addLayer(surfaceSoilMoistureClasses.clip(wayanad), classifiedSurfaceVis, 'Classified Normalized Surface Soil Moisture', false);
+// // Add classified surface soil moisture layer
+// Map.addLayer(surfaceSoilMoistureClasses.clip(wayanad), classifiedSurfaceVis, 'Classified Normalized Surface Soil Moisture', false);
 
 // Add classified rootzone soil moisture layer
 Map.addLayer(rootzoneSoilMoistureClasses.clip(wayanad), classifiedRootzoneVis, 'Classified Normalized Rootzone Soil Moisture', false);
 
-Export.image.toDrive({
-    image: surfaceSoilMoistureClasses.clip(wayanad),
-    description: 'Classified Normalized Surface Soil Moisture',
-    fileNamePrefix: 'Classified Normalized Surface Soil Moisture',
-    region: geometry,
-    scale: 30,
-    maxPixels: 1e9
-});
+// Export.image.toDrive({
+//     image: surfaceSoilMoistureClasses.clip(wayanad),
+//     description: 'Classified Normalized Surface Soil Moisture',
+//     fileNamePrefix: 'Classified Normalized Surface Soil Moisture',
+//     region: geometry,
+//     scale: 30,
+//     maxPixels: 1e9
+// });
 Export.image.toDrive({
     image: rootzoneSoilMoistureClasses.clip(wayanad),
     description: 'Classified Normalized Rootzone Soil Moisture',
@@ -674,7 +680,13 @@ Export.image.toDrive({
 
 // Function to load and clip mean rainfall data for a specific year
 function getMeanRainfallData(year) {
-  var rainfall = ee.Image('projects/ee-ce23resch11016/assets/IMD/' + year + 'mean_rainfall_100m');
+  var imageName;
+  if (year >= 2025) {
+    imageName = 'projects/ee-ce23resch11016/assets/IMD/' + year + 'mean_rainfall_100m_FORECASTED';
+  } else {
+    imageName = 'projects/ee-ce23resch11016/assets/IMD/' + year + 'mean_rainfall_100m';
+  }
+  var rainfall = ee.Image(imageName);
   return rainfall.clip(wayanad);
 }
 
@@ -685,147 +697,155 @@ function getSumRainfallData(year) {
   return rainfall.clip(wayanad);
 }
 */
-
 // Years for which data is available
 var years = [endYear-3,endYear-2,endYear-1,endYear];
 print(years)
-
 // Load and combine mean rainfall data for all years
 var meanRainfallImages = years.map(function(year) {
   return getMeanRainfallData(year);
 });
-
 // Compute the average of the mean rainfall across all years
-var IMDRainMeanAllYears = ee.ImageCollection(meanRainfallImages).mean().rename('precipitation');
-
+var avgOfPastYears = ee.ImageCollection(meanRainfallImages).mean().rename('precipitation');
+// Define the export task
+Export.image.toDrive({
+  image: avgOfPastYears.clip(geometry),
+  description: 'avg_rainfall_for_CloudBurstProcessingIncolab'+endYear,
+  folder: 'Wayanad_Exports', // This folder will be created in your Google Drive
+  fileNamePrefix: 'avg_rainfall_for_CloudBurstProcessingIncolab'+endYear,
+  region: geometry.bounds(), // Export the full extent of your study area
+  scale: 100, // IMPORTANT: Use a scale that matches your source data
+  crs: 'EPSG:4326' // A standard CRS, or use your project's native CRS
+});
 // Calculate min and max for the mean rainfall (all years)
-var meanStatsAllYears = IMDRainMeanAllYears.reduceRegion({
+var meanStatsAllYears = avgOfPastYears.reduceRegion({
   reducer: ee.Reducer.minMax(),
   geometry: wayanad,
   scale: scale, // Adjust based on dataset resolution
   maxPixels: 1e9
 });
-
-/*
-// Load and combine sum rainfall data for all years
-var sumRainfallImages = years.map(function(year) {
-  return getSumRainfallData(year);
-});
-
-// Compute the average of the sum rainfall across all years
-var IMDRainSumAllYears = ee.ImageCollection(sumRainfallImages).mean().rename('precipitation');
-
-// Calculate min and max for the sum rainfall (all years)
-var sumStatsAllYears = IMDRainSumAllYears.reduceRegion({
-  reducer: ee.Reducer.minMax(),
-  geometry: wayanad,
-  scale: scale,
-  maxPixels: 1e9
-});
-*/
-
 // Print the statistics
 print('Mean Rainfall Min/Max:', meanStatsAllYears);
-//print('Sum Rainfall (2020–2023) Min/Max:', sumStatsAllYears);
 
+// Get the min and max from the dictionary
+var minValmeanStatsAllYears = ee.Number(meanStatsAllYears.get('precipitation_min')).getInfo();
+var maxValmeanStatsAllYears = ee.Number(meanStatsAllYears.get('precipitation_max')).getInfo();
 // Visualization parameters for mean rainfall
 var multiYearMeanVis = {
-  min: 2.823505982333164,  // Adjust based on the data range
-  max: 6.435402457386337,  // Adjust based on the data range
+  min: minValmeanStatsAllYears,  // Adjust based on the data range
+  max: maxValmeanStatsAllYears,  // Adjust based on the data range
   palette: ['blue', 'green', 'yellow', 'orange', 'red']
 };
-
-// Visualization parameters for sum rainfall
-/*
-var multiYearSumVis = {
-  min: 1394.1278,  // Adjust based on the data range
-  max: 3142.7955,  // Adjust based on the data range
-  palette: ['blue', 'green', 'yellow', 'orange', 'red']
-};
-*/
-
 // Add the mean rainfall layer to the map
-Map.addLayer(IMDRainMeanAllYears, multiYearMeanVis, 'Mean Rainfall ', false);
+Map.addLayer(avgOfPastYears, multiYearMeanVis, 'Mean Rainfall ', false);
 
-// Add the sum rainfall layer to the map
-//Map.addLayer(IMDRainSumAllYears, multiYearSumVis, 'Sum Rainfall (2020–2023)', false);
+// 3. Add 100 to every pixel.
+// First, .unmask(0) ensures that any pixels with no data are treated as 0.
+// Then, .add(100) increases the value of every single pixel by 100.
+//var IMDRainMeanAllYears = avgOfPastYears.add(100).rename('precipitation');
 
-// Define min and max values for normalization (Mean Rainfall)
-var minMeanRainfall = 2.7731274273228532;  // Minimum mean rainfall (2020–2023)
-var maxMeanRainfall = 6.454396657208099;  // Maximum mean rainfall (2020–2023)
+// // --- Method 1: Spatially Localized "Hotspot" ---
+// // 1. Define the center of the simulated cloudburst event
+// // I've picked a random point in Wayanad; you should place it in a vulnerable area.
+// var cloudburstCenter = ee.Geometry.Point([76.13, 11.68]);
+// Map.addLayer(cloudburstCenter, {color: 'blue'}, 'Cloudburst Center');
+// // 2. Define the intensity (e.g., 150 mm) and radius (e.g., 5 km)
+// var maxRainfall = 150; // mm, representing an extreme event
+// var radius = 5000; // 5 km radius, covering approx. 78 sq km
+// // 3. Create a Gaussian kernel to simulate rainfall decreasing from the center
+// // This creates a smooth, bell-curve-like distribution of rain
+// var gaussianKernel = ee.Kernel.gaussian({
+//   radius: radius,
+//   sigma: radius / 3, // Adjust sigma to control how fast the rain decreases
+//   units: 'meters',
+//   normalize: true
+// });
+// // 4. Create an image with the peak rainfall at the center and convolve it
+// // This "stamps" the Gaussian kernel onto the map at your chosen point
+// var cloudburstEvent = ee.Image(0).paint(cloudburstCenter, 1)
+//                                 .convolve(gaussianKernel)
+//                                 .multiply(maxRainfall); // Scale intensity to the max value
+// // 5. Add this event to your baseline rainfall
+// // 'avgOfPastYears' is your original mean rainfall image
+// var IMDRainMeanAllYears = avgOfPastYears.add(cloudburstEvent).rename('precipitation');
+// // Visualization
+// var rainVis = {min: 0, max: 200, palette: ['#ffffcc','#a1dab4','#41b6c4','#225ea8']};
+// Map.addLayer(IMDRainMeanAllYears, rainVis, 'Rainfall with Cloudburst Hotspot');
 
-// Normalize the mean rainfall
-var normalizedMeanRainfall = IMDRainMeanAllYears.subtract(minMeanRainfall).divide(maxMeanRainfall - minMeanRainfall);
-
-// Classify normalized mean rainfall into categories
-var meanRainfallClasses = ee.Image(0)
-  .where(normalizedMeanRainfall.lt(0.306), 1)  // Dark Green: 0.0 - 0.306 (~3.82 - 5.37)
-  .where(normalizedMeanRainfall.gte(0.306).and(normalizedMeanRainfall.lt(0.445)), 2)  // Olive Green: 0.306 - 0.445 (~5.37 - 6.05)
-  .where(normalizedMeanRainfall.gte(0.445).and(normalizedMeanRainfall.lt(0.584)), 3)  // Light Yellow: 0.445 - 0.584 (~6.05 - 6.73)
-  .where(normalizedMeanRainfall.gte(0.584).and(normalizedMeanRainfall.lt(0.725)), 4)  // Light Gray: 0.584 - 0.725 (~6.73 - 7.40)
-  .where(normalizedMeanRainfall.gte(0.725), 5);  // Cream Yellow: 0.725 - 1.0 (~7.40 - 8.61)
-
-// Visualization for the mean rainfall classes
-var meanRainfallClassesVis = {
-  min: 1,
-  max: 5,
-  palette: [
-  '#006400', // Dark Green
-  '#808000', // Olive
-  '#FFFFE0', // Light Yellow
-  '#D3D3D3', // Light Gray
-  '#FFFDD0'  // Cream
-]};
-
-// Add the classified mean rainfall layer to the map
-Map.addLayer(meanRainfallClasses.clip(wayanad), meanRainfallClassesVis, 'Normalized Classiified Mean Rainfall Classes ', false);
-Export.image.toDrive({
-    image: meanRainfallClasses.clip(wayanad),
-    description: 'Normalized Classiified Mean Rainfall Classes',
-    fileNamePrefix: 'Normalized Classiified Mean Rainfall Classes',
-    region: geometry,
-    scale: 30,
-    maxPixels: 1e9
+// Your three coordinates for the cloud burst
+var cloudBurstPoints = ee.FeatureCollection([
+  // ee.Feature(ee.Geometry.Point([76.13, 11.68])),
+  // ee.Feature(ee.Geometry.Point([75.97418981928425, 11.798547794903879])),
+  // ee.Feature(ee.Geometry.Point([76.11289221186237, 11.60355874564377])),
+  // ee.Feature(ee.Geometry.Point([76.1746903075655, 11.763594370588798])),
+  // ee.Feature(ee.Geometry.Point([76.04697424311237, 11.900425010826122])),
+  // ee.Feature(ee.Geometry.Point([75.97281652826862, 11.82449113598898])),
+  // ee.Feature(ee.Geometry.Point([75.95633703608112, 11.731729135069404])),
+  // ee.Feature(ee.Geometry.Point([76.01950842279987, 11.657766052997415])),
+  // ee.Feature(ee.Geometry.Point([76.11838537592487, 11.610688370268486])),
+  // ee.Feature(ee.Geometry.Point([76.19254309076862, 11.554184660848017])),
+  
+  // ee.Feature(ee.Geometry.Point([76.04697424311237, 11.900425010826122])),
+  // ee.Feature(ee.Geometry.Point([75.97281652826862, 11.82449113598898])),
+  // ee.Feature(ee.Geometry.Point([75.95633703608112, 11.731729135069404])),
+  // ee.Feature(ee.Geometry.Point([76.092292846628, 11.688967410848479])),
+  // ee.Feature(ee.Geometry.Point([76.00714880365925, 11.585397621034303])),
+  // ee.Feature(ee.Geometry.Point([76.19254309076862, 11.554184660848017])),
+  
+  // ee.Feature(ee.Geometry.Point([76.15409094233112, 11.547726342929998])),
+  // ee.Feature(ee.Geometry.Point([76.02225500483112, 11.584052305574307])),
+  // ee.Feature(ee.Geometry.Point([75.85334020990925, 11.764266593747378])),
+  // ee.Feature(ee.Geometry.Point([75.9439774169405, 11.698380931223172])),
+  
+  // ee.Feature(ee.Geometry.Point([75.97418981928425, 11.798547794903879])),
+  // ee.Feature(ee.Geometry.Point([76.11289221186237, 11.60355874564377])),
+  // ee.Feature(ee.Geometry.Point([75.850593627878, 11.786852361170737])),
+  // ee.Feature(ee.Geometry.Point([76.00714880365925, 11.677939761793779])),
+  
+  ee.Feature(ee.Geometry.Point([75.97418981928425, 11.798547794903879])),
+  ee.Feature(ee.Geometry.Point([76.11289221186237, 11.60355874564377])),
+  ee.Feature(ee.Geometry.Point([76.03049475092487, 11.567638960443373])),
+  ee.Feature(ee.Geometry.Point([75.95771032709675, 11.700801523621138])),
+  
+]);
+// Add them to the map as black dots
+Map.addLayer(cloudBurstPoints, {color: 'black'}, 'Cloud Burst Centre Points');
+//Stats used for the Cloud Burst
+//max_rainfall = 150  # mm to add at the center
+//radius_m = 7000     # Radius in meters
+// Load your custom rainfall image from your GEE Assets
+var rainfallWithCloudburst = ee.Image('projects/ee-ce23resch11016/assets/IMD/' + endYear + 'mean_rainfall_100m_CloudBurst_4Points');
+print(rainfallWithCloudburst.getInfo())
+var IMDRainMeanAllYears = rainfallWithCloudburst.rename('precipitation');
+// --- Visualization ---
+// Calculate min and max for the mean rainfall (all years)
+var cloudBurstMeanStatsAllYears = IMDRainMeanAllYears.reduceRegion({
+  reducer: ee.Reducer.minMax(),
+  geometry: wayanad,
+  scale: scale, // Adjust based on dataset resolution
+  maxPixels: 1e9
 });
-/*
-// Define min and max values for normalization
-var minSumRainfall = 1394.1278;  // Minimum sum rainfall (2020–2023)
-var maxSumRainfall = 3142.7955;  // Maximum sum rainfall (2020–2023)
+// Print the statistics
+print('Cloud Burst Mean Rainfall Min/Max:', cloudBurstMeanStatsAllYears);
+// Visualization parameters for mean rainfall
+var multiYearMeanVis = {
+  min: minValmeanStatsAllYears,  // Adjust based on the data range
+  max: maxValmeanStatsAllYears,  // Adjust based on the data range
+  palette: ['blue', 'green', 'yellow', 'orange', 'red']
+};
+// Add the mean rainfall layer to the map
+Map.addLayer(IMDRainMeanAllYears, multiYearMeanVis, 'Cloud Burst Mean Rainfall ', false);
 
-// Normalize the sum rainfall
-var normalizedSumRainfall = IMDRainSumAllYears.subtract(minSumRainfall).divide(maxSumRainfall - minSumRainfall);
-
-// Classify normalized rainfall into categories
-var sumRainfallClasses = ee.Image(0)
-  .where(normalizedSumRainfall.lt(0.306), 1)  // Dark Green: 0.0 - 0.306 
-  .where(normalizedSumRainfall.gte(0.306).and(normalizedSumRainfall.lt(0.445)), 2)  // Olive Green: 0.306 - 0.445 
-  .where(normalizedSumRainfall.gte(0.445).and(normalizedSumRainfall.lt(0.584)), 3)  // Light Yellow: 0.445 - 0.584 
-  .where(normalizedSumRainfall.gte(0.584).and(normalizedSumRainfall.lt(0.725)), 4)  // Light Gray: 0.584 - 0.725 
-  .where(normalizedSumRainfall.gte(0.725), 5);  // Cream Yellow: 0.725 - 1.0 (~3,057.4 - 3,814.4)
-
-// Visualization for the rainfall classes
-var sumRainfallClassesVis = {
-  min: 1,
-  max: 5,
-  palette: [
-  '#006400', // Dark Green
-  '#808000', // Olive
-  '#FFFFE0', // Light Yellow
-  '#D3D3D3', // Light Gray
-  '#FFFDD0'  // Cream
-]};
-
-// Add the classified rainfall layer to the map
-Map.addLayer(sumRainfallClasses.clip(wayanad), sumRainfallClassesVis, 'Normalized Classiified Sum Rainfall Classes (2020–2023)', false);
 Export.image.toDrive({
-    image: sumRainfallClasses.clip(wayanad),
-    description: 'Normalized Classiified Sum Rainfall Classes',
-    fileNamePrefix: 'Normalized Classiified Sum Rainfall Classes',
-    region: geometry,
-    scale: 30,
-    maxPixels: 1e9
+  image: IMDRainMeanAllYears.clip(geometry),
+  description: 'CloudBurst_MeanRainfall_Map'+endYear,
+  folder: 'Wayanad_Exports',// optional
+  fileNamePrefix: 'CloudBurst_MeanRainfall_Styled'+endYear,
+  scale: 30,
+  region: wayanad.geometry(),
+  fileFormat: 'GeoTIFF',
+  maxPixels: 1e13
 });
-*/
+
 
 
 
@@ -1180,78 +1200,131 @@ var styledLithologyML = lithologyWithCategories.map(function(feature) {
 
 
 
+//Lanslide Points
 
-
-
-//Landslide Points
 // Load the landslide points shapefile asset and clip to Wayanad boundaries
 var landslidePoints = ee.FeatureCollection('projects/ee-ce23resch11016/assets/Points2018comb2019/Landslide2018comb2019Gemini')
                           .filterBounds(geometry);
-
 // Define the range of years
 var startYear = 2018;
-var currentYear = endYear; // Assuming endYear is defined elsewhere as the current year
-var trainingEndYear = currentYear - 1; // Training data goes up to previous year
+//var endYear = 2023; // Change this as needed
 
-// Generate a list of years as strings for training (up to previous year)
-var trainingYears = [];
-for (var year = startYear; year <= trainingEndYear; year++) {
-  trainingYears.push(year.toString());
+// Generate a list of years as strings using a loop
+var years = [];
+for (var year = startYear; year <= endYear; year++) {
+  years.push(year.toString());
 }
 
-// Generate a list of years as strings for all years (including current year)
-var allYears = [];
-for (var year = startYear; year <= currentYear; year++) {
-  allYears.push(year.toString());
-}
+// Filter the landslide points for the range of years
+//landslidePoints = landslidePoints.filter(ee.Filter.inList('Year', ['2018', '2019', '2020']));
+landslidePoints = landslidePoints.filter(ee.Filter.inList('Year', years));
 
-// Filter landslide points for training (up to previous year)
-var landslidePointsTraining = landslidePoints.filter(ee.Filter.inList('Year', trainingYears));
+// Print the filtered points to verify
+print('Filtered Landslide Points (Years ' + startYear + ' to ' + endYear + '):', landslidePoints);
 
-// Filter landslide points for current year only
-var landslidePointsCurrentYear = landslidePoints.filter(ee.Filter.eq('Year', currentYear.toString()));
+// Add the landslide points layer to the map
+Map.addLayer(landslidePoints, {color: 'red'}, 'Landslide Points', false);
 
-// Filter all landslide points (for reference)
-var landslidePointsAll = landslidePoints.filter(ee.Filter.inList('Year', allYears));
 
-// Print information about the data splits
-print('Training Years:', trainingYears);
-print('Current Year:', currentYear);
-print('Landslide Points for Training (Years ' + startYear + ' to ' + trainingEndYear + '):', landslidePointsTraining);
-print('Landslide Points for Current Year (' + currentYear + '):', landslidePointsCurrentYear);
-print('Total Landslide Points (All Years):', landslidePointsAll);
+//QGIS Created Non-Lanslide Points
 
-// Add the landslide points layers to the map
-Map.addLayer(landslidePointsTraining, {color: 'red'}, 'Training Landslide Points', false);
-Map.addLayer(landslidePointsCurrentYear, {color: 'orange'}, 'Current Year Landslide Points', false);
-
-//QGIS Created Non-Landslide Points
-// Load the non-landslide points shapefile asset and clip to Wayanad boundaries
+// Load the landslide points shapefile asset and clip to Wayanad boundaries
 var nonLandslidePoints = ee.FeatureCollection('projects/ee-ce23resch11016/assets/Points2018comb2019/Non-Landslide2018comb2019Gemini')
                           .filterBounds(geometry);
 
-// Note: Assuming non-landslide points don't have year information, so we'll use all of them
-// If they do have year information, you might want to filter them similarly
+// Add the non-landslide points layer to the map
 Map.addLayer(nonLandslidePoints, {color: 'blue'}, 'Non-Landslide Points', false);
 
+
+
+
+
+
+
+
+
+function normalize(image){
+  var bandNames = image.bandNames();
+  // Compute min and max of the image
+  var minDict = image.reduceRegion({
+    reducer: ee.Reducer.min(),
+    geometry: geometry,
+    scale: 30,
+    maxPixels: 1e13,
+    bestEffort: true
+  });
+  var maxDict = image.reduceRegion({
+    reducer: ee.Reducer.max(),
+    geometry: geometry,
+    scale: 30,
+    maxPixels: 1e13,
+    bestEffort: true
+  });
+  var mins = ee.Image.constant(minDict.values(bandNames));
+  var maxs = ee.Image.constant(maxDict.values(bandNames));
+
+  var normalized = image.subtract(mins).divide(maxs.subtract(mins));
+  return normalized;
+}
+
+
+
 // Creating LSM
-// [All the LSM factor creation code remains the same...]
+
+// Combine elevation, aspect, and slope classifications into a single image
 var elevation = elevation.reproject('EPSG:4326', null, 30).rename('elevation_class')
 var slope = ee.Terrain.slope(elevation);
 var slope = slope.reproject('EPSG:4326', null, 30).rename('slope_class')
 var aspect = ee.Terrain.aspect(elevation);
 var aspect = aspect.reproject('EPSG:4326', null, 30).rename('aspect_class')
 curvature = curvature.reproject('EPSG:4326', null, 30).rename('curvature_class')
+/*
+//Classified elevation,slope, aspect
+var elevation = elevationClasses.reproject('EPSG:4326', null, 30).rename('elevation_class')
+var slope = slopeClasses.reproject('EPSG:4326', null, 30).rename('slope_class')
+var aspect = aspectClasses.reproject('EPSG:4326', null, 30).rename('aspect_class')
+*/
+
 
 var localRelief = localRelief.reproject('EPSG:4326', null, 30).rename('relief_class')
 var reliefClasses = reliefClasses.reproject('EPSG:4326', null, 30).rename('classifiedRelief_class')
 
+
 // Ensure LULC label band is integer
 var lulcClass = dwImage.select('label').add(1).reproject('EPSG:4326', null, 30).rename('landcover_class');
 
-var surfaceSoilMoisture = surfaceSoilMoistureAllYears.reproject('EPSG:4326', null, 30).rename('surface_moisture_class');
+// var surfaceSoilMoisture = surfaceSoilMoistureAllYears.reproject('EPSG:4326', null, 30).rename('surface_moisture_class');
 var rootzoneSoilMoisture = rootzoneSoilMoistureAllYears.reproject('EPSG:4326', null, 30).rename('rootzone_moisture_class');
+//Normalized Classified Soil Moisture
+//surfaceSoilMoisture = surfaceSoilMoistureClasses.reproject('EPSG:4326', null, 30).rename('surfaceClassified_moisture_class');
+//rootzoneSoilMoisture = rootzoneSoilMoistureClasses.reproject('EPSG:4326', null, 30).rename('rootzoneClassified_moisture_class');
+
+//var IMDRainSum = IMDRainSumAllYears.reproject('EPSG:4326', null, 30).rename('sum_rainfall_class');
 var IMDRainMean = IMDRainMeanAllYears.reproject('EPSG:4326', null, 30).rename('mean_rainfall_class');
+//Normalized Classified Rain
+//IMDRainSum = sumRainfallClasses.reproject('EPSG:4326', null, 30).rename('Classified_sum_rainfall_class');
+//IMDRainMean = meanRainfallClasses.reproject('EPSG:4326', null, 30).rename('Classified_mean_rainfall_class');
+
+// Get distinct categories in the L2DESCRIPT field and create a dictionary with unique numeric codes
+var lineamentCategories = lineament.aggregate_array('L2DESCRIPT').distinct();
+var lineamentCategoryDict = ee.Dictionary.fromLists(lineamentCategories, ee.List.sequence(1, lineamentCategories.size()));
+
+// Map over lineament FeatureCollection to add unique numeric codes based on the dictionary
+var lineamentWithCodes = lineament.map(function(feature) {
+  var category = ee.String(feature.get('L2DESCRIPT')).trim();
+  var code = lineamentCategoryDict.get(category);  // Get the unique code from dictionary
+  return feature.set('category_code', code);  // Add code as a property
+});
+
+// Convert the lineament FeatureCollection with category codes to an image
+var lineamentImage = lineamentWithCodes.reduceToImage({
+  properties: ['category_code'],
+  reducer: ee.Reducer.first()
+}).reproject('EPSG:4326', null, 30).rename('lineament_class');
+
+// Print to check lineamentImage
+print('Lineament Image:', lineamentImage);
+
 
 // Get distinct categories in STRATIGRAP and create a dictionary with unique numeric codes
 var geologyCategories = geology.aggregate_array('STRATIGRAP').distinct();
@@ -1270,6 +1343,10 @@ var geologyImage = geologyWithCodes.reduceToImage({
   reducer: ee.Reducer.first()
 }).reproject('EPSG:4326', null, 30).rename('geology_class');
 
+// Print to check geologyImage
+print('geology Image:', geologyImage);
+
+
 // Get distinct categories in STRATIGRAP and create a dictionary with unique numeric codes
 var lithologyCategories = lithology.aggregate_array('STRATIGRAP').distinct();
 var lithologyCategoryDict = ee.Dictionary.fromLists(lithologyCategories, ee.List.sequence(1, lithologyCategories.size()));
@@ -1286,6 +1363,9 @@ var lithologyImage = lithologyWithCodes.reduceToImage({
   properties: ['category_code'],
   reducer: ee.Reducer.first()
 }).reproject('EPSG:4326', null, 30).rename('lithology_class');
+
+// Print to check lithologyImage
+print('Lithology Image:', lithologyImage);
 
 // Get distinct categories in the DESCRIPTIO field and create a dictionary with unique numeric codes
 var geomorphologyCategories = geomorphology.aggregate_array('DESCRIPTIO').distinct();
@@ -1304,18 +1384,46 @@ var geomorphologyImage = geomorphologyWithCodes.reduceToImage({
   reducer: ee.Reducer.first()
 }).reproject('EPSG:4326', null, 30).rename('geomorphology_class');
 
+// Print to check geomorphologyImage
+print('Geomorphology Image:', geomorphologyImage);
+
+
+
+
+
+
 // Flow Accumulation from the MERIT Hydro dataset, transformed with log for easier visualization
 var flowaccumulation = ee.Image("MERIT/Hydro/v1_0_1").select('upa')
                     .log() // Log-transform for visualization
                     .clip(geometry) // Clip to Wayanad geometry
                     .reproject('EPSG:4326', null, 30)
                     .rename('FWACC');
+Map.addLayer(flowaccumulation, null, 'Flow Accumulation', false);
+Export.image.toDrive({
+    image: flowaccumulation.clip(wayanad),
+    description: 'Flow Accumulation',
+    fileNamePrefix: 'Flow Accumulation',
+    region: geometry,
+    scale: 30,
+    maxPixels: 1e9
+});
 
 // Global Height Above the Nearest Drainage (HAND)
 var hand = ee.Image("users/gena/GlobalHAND/30m/hand-1000")
             .clip(geometry)
             .reproject('EPSG:4326', null, 30)
             .rename('HAND');
+var paletteHand = ['023858', '006837', '1a9850', '66bd63', 'a6d96a', 'd9ef8b', 'ffffbf', 'fee08b', 'fdae61', 'f46d43', 'd73027'];
+var visHand = {min: 1, max: 150, palette: paletteHand}
+Map.addLayer(hand, visHand, 'HAND', false);
+Export.image.toDrive({
+    image: hand.clip(wayanad),
+    description: 'HAND',
+    fileNamePrefix: 'HAND',
+    region: geometry,
+    scale: 30,
+    maxPixels: 1e9
+});
 
 // Topographic Position Index (TPI)
 // Calculate mean TPI using a 5-pixel focal mean filter
@@ -1324,12 +1432,26 @@ var tpi = elevation.subtract(meanTPI)  // Subtract focal mean from elevation
            .reproject('EPSG:4326', null, 30)
            .rename('mTPI')
            .clip(geometry);
+Map.addLayer(tpi.clip(wayanad), null, 'TPI', false);
+// Export the TPI as a GeoTIFF to Google Drive
+Export.image.toDrive({
+  image: tpi.clip(wayanad),  // Image to export
+  description: 'TPI_Export',  // Task description
+  folder: 'Wayanad_Exports',  // Optional: Specify the folder in Google Drive
+  fileNamePrefix: 'tpi',  // Prefix for the exported file name
+  region: geometry,  // Region of interest to export
+  scale: 30,  // Pixel size (in meters)
+  crs: 'EPSG:4326',  // Coordinate reference system
+  //maxPixels: 1e8,  // Maximum number of pixels to export (adjust if needed)
+  fileFormat: 'GeoTIFF'  // Export as GeoTIFF
+});
 
 // Horizontal Distance to Channel Network (HDND)
 // Select pixels with drainage area greater than 0.5 km² to identify rivers
 var rivers = ee.Image("MERIT/Hydro/v1_0_1").select('upa')
               .clip(geometry)
               .gt(0.5);  // Threshold for river network
+Map.addLayer(rivers, null, 'Rivers', false);
 
 // Define maximum distance for Euclidean distance calculation
 var maxDistM = 7500;  // Maximum distance in meters
@@ -1340,24 +1462,69 @@ var hdtp = rivers.distance(euclideanKernel) // Calculate distance to river netwo
            .reproject('EPSG:4326', null, 30)
            .rename('HDND');
 
+var visParamsEuclideanDist = {min: 0, max: maxDistM};
+Map.addLayer(hdtp, visParamsEuclideanDist, 'HDTP', false);
+Export.image.toDrive({
+    image: hdtp.clip(wayanad),
+    description: 'HDTP',
+    fileNamePrefix: 'HDTP',
+    region: geometry,
+    scale: 30,
+    maxPixels: 1e9
+});
+
 var hillshade = ee.Terrain.hillshade(elevation, 90, 45).rename('HLSH')
 var hillshade = hillshade.reproject('EPSG:4326', null, 30)
+Export.image.toDrive({
+    image: hillshade.clip(wayanad),
+    description: 'HLSH',
+    fileNamePrefix: 'HLSH',
+    region: geometry,
+    scale: 30,
+    maxPixels: 1e9
+});
+
 
 var combinedLSMFactors = slope.addBands(aspect).addBands(elevation)
                     .addBands(hillshade).addBands(curvature)
                     //.addBands(localRelief)
                     .addBands(reliefClasses)
                     .addBands(lulcClass)
+                    //.addBands(surfaceSoilMoisture)
                     .addBands(rootzoneSoilMoisture)
+                    //.addBands(IMDRainSum)
                     .addBands(IMDRainMean)
                     .addBands(geologyImage)
                     .addBands(geomorphologyImage)
                     .addBands(lithologyImage)
+                    //.addBands(lineamentImage) 
                     .addBands(hand)
                     .addBands(flowaccumulation)
                     .addBands(tpi)
                     .addBands(hdtp)
 
+// Define export parameters
+Export.image.toDrive({
+  image: combinedLSMFactors.toFloat().clip(wayanad), // The combined LSM factors image
+  description: 'CombinedLSMFactors_Export_NoSurfSoil'+endYear, // Description for the task
+  folder: 'Wayanad_Exports', // Google Drive folder name (change as needed)
+  fileNamePrefix: 'CombinedLSMFactors_NoSurfSoil'+endYear, // Prefix for the file name
+  region: wayanad, // Geometry defining the export region (adjust to your ROI)
+  scale: 30, // Scale in meters (adjust based on your data, e.g., 30m for Landsat)
+  crs: 'EPSG:4326', // Coordinate Reference System (e.g., WGS 84)
+  maxPixels: 1e13 // Maximum pixels to handle large images
+});
+
+// Export the annual mean image to an Earth Engine Asset
+Export.image.toAsset({
+  image: combinedLSMFactors.toFloat().clip(wayanad), // The combined LSM factors image
+  description: 'CombinedLSMFactors_Export_NoSurfSoil'+endYear, // Description for the task
+  assetId: 'projects/ee-ce23resch11016/assets/CombinedLSMFactors/NoSurfSoil_' + endYear , // Modify the assetId path
+  region: wayanad.geometry(),
+  scale: 30, // Scale in meters (adjust based on your data, e.g., 30m for Landsat)
+  crs: 'EPSG:4326', // Coordinate Reference System (e.g., WGS 84)
+  maxPixels: 1e13 // Maximum pixels to handle large images
+});
 
 
 //Correlation Matrix
@@ -1397,123 +1564,139 @@ print('Pairwise Correlation Matrix:', pairwiseCorr);
 // Export the table as a CSV file
 Export.table.toDrive({
   collection: pairwiseCorr,
-  description: 'Pairwise_Correlation_NoSurfSoil_Fin3_'+endYear,
+  description: 'Pairwise_Correlation_NoSurfSoil'+endYear,
   folder: 'Wayanad_Exports',
-  fileNamePrefix: 'pairwise_correlation_Normal_NoSurfSoil_Fin3_'+endYear,
+  fileNamePrefix: 'pairwise_correlation_Normal_NoSurfSoil'+endYear,
   fileFormat: 'CSV',
 });
 
 
-// ========== MODIFIED DATA PREPARATION SECTION ==========
+
+
+// Print to check the updated combined LSM factors
+print('Updated Combined LSM Factors:', combinedLSMFactors);
 
 // Label non-landslide points with 'landslide' = 0
 nonLandslidePoints = nonLandslidePoints.map(function(pt) {
   return pt.set('landslide', 0);
 });
 
-// Label training landslide points (up to previous year) with 'landslide' = 1
-var labeledTrainingLandslidePoints = landslidePointsTraining.map(function(pt) {
+
+// Label landslide points with 'landslide' = 1
+var labeledLandslidePoints = landslidePoints.select('landslide').map(function(pt) {
   return pt.set('landslide', 1);
 });
 
-// Label current year landslide points with 'landslide' = 1
-var labeledCurrentYearLandslidePoints = landslidePointsCurrentYear.map(function(pt) {
-  return pt.set('landslide', 1);
+// Merge landslide and non-landslide points into one collection
+var trainingPoints = labeledLandslidePoints.merge(nonLandslidePoints);
+/*
+// Export the training points to Google Drive as a shapefile (with 'landslide' attribute)
+Export.table.toDrive({
+  collection: trainingPoints,
+  description: 'Training_Points_Export',
+  fileFormat: 'SHP', // Export as shapefile
+  folder: 'Wayand_Exports', // Optional: Change to your desired folder name
+  fileNamePrefix: 'training_points', // Prefix for the exported file name
+  selectors: ['landslide', 'system:index', 'geometry'] // Ensure you keep the 'landslide' label and other metadata
 });
+*/
+// Calculate and print the total number of landslide points
+var numLandslidePoints = labeledLandslidePoints.size();
+print('Total Number of Landslide Points:', numLandslidePoints);
 
-// Create training points collection (historical landslide + non-landslide points)
-var trainingPoints = labeledTrainingLandslidePoints.merge(nonLandslidePoints);
+// Calculate and print the total number of non-landslide points
+var numNonLandslidePoints = nonLandslidePoints.size();
+print('Total Number of Non-Landslide Points:', numNonLandslidePoints);
 
-// Extract the values from the input data for training points
-var trainingDataHistorical = combinedLSMFactors.reduceRegions({
+// Calculate and print the total number of training points
+var totalTrainingPoints = trainingPoints.size();
+print('Total Number of Training Points:', totalTrainingPoints);
+
+print('Training Points Collection:', trainingPoints);
+
+
+
+
+
+// Extract the values from the input data for each sample training point
+var trainingData = combinedLSMFactors.reduceRegions({
   collection: trainingPoints,
   reducer: ee.Reducer.mean(),
-  scale: 30
+  scale: 30 // Adjust the scale to match your dataset resolution
+});
+print('Training Data', trainingData);
+
+// Export the training data FeatureCollection as a CSV file
+Export.table.toDrive({
+  collection: trainingData,
+  description: 'Training_Data_Export'+endYear,
+  folder: 'Wayanad_Exports', // Change this to your desired folder name
+  fileNamePrefix: 'Training_Data'+endYear,
+  fileFormat: 'CSV'
 });
 
-// Extract the values from the input data for current year landslide points
-var currentYearData = combinedLSMFactors.reduceRegions({
-  collection: labeledCurrentYearLandslidePoints,
-  reducer: ee.Reducer.mean(),
-  scale: 30
-});
 
-// Filter out null values from the historical training data
-var trainingDataClean = trainingDataHistorical.randomColumn('random');
-var trainingDataNoNulls = trainingDataClean.filter(ee.Filter.notNull(['landslide']));
-
-// Filter out null values from current year data
-var currentYearDataClean = currentYearData.filter(ee.Filter.notNull(['landslide']));
-
-// Split historical data into training and testing (70% train, 30% test)
-var training = trainingDataNoNulls.filter(ee.Filter.lte('random', 0.7));
-var testingHistorical = trainingDataNoNulls.filter(ee.Filter.gt('random', 0.7));
-
-// Combine historical testing data with current year data for final testing
-var acurracy_evaluation = testingHistorical.merge(currentYearDataClean);
-
-// Print statistics about the data splits
-print('=== DATA SPLIT STATISTICS ===');
-print('Training Data Class Distribution:', training.aggregate_histogram('landslide'));
-print('Historical Testing Data Class Distribution:', testingHistorical.aggregate_histogram('landslide'));
-print('Current Year Data Class Distribution:', currentYearDataClean.aggregate_histogram('landslide'));
-print('Final Testing Data Class Distribution:', acurracy_evaluation.aggregate_histogram('landslide'));
-
-// Calculate and print the sizes
-var numTrainingLandslidePoints = labeledTrainingLandslidePoints.size();
-var numCurrentYearLandslidePoints = labeledCurrentYearLandslidePoints.size();
-var numNonLandslidePoints = nonLandslidePoints.size();
-var totalTrainingPoints = trainingPoints.size();
-var finalTestingSize = acurracy_evaluation.size();
-
-print('=== POINT COUNTS ===');
-print('Training Landslide Points (Historical):', numTrainingLandslidePoints);
-print('Current Year Landslide Points:', numCurrentYearLandslidePoints);
-print('Non-Landslide Points:', numNonLandslidePoints);
-print('Total Training Collection Size:', totalTrainingPoints);
-print('Final Testing Collection Size:', finalTestingSize);
-
-// Define the name of the variables used in training
+//define the name of the variables used in training
 var bandNames = combinedLSMFactors.bandNames();
-print('Bands used in training:', bandNames);
+    print(bandNames, "band useds in training")
 
+//filter out null values from the training feature collection
+var samples_dataset = trainingData.randomColumn('random');
+
+var samples_no_nulls = samples_dataset.filter(ee.Filter.notNull(['landslide']));
+
+// //dividing the samples for training and accuracy evaluation
+// var training = samples_no_nulls.filter(ee.Filter.lte('random', 0.7));
+// var acurracy_evaluation = samples_no_nulls.filter(ee.Filter.gt('random', 0.7));
+// Use the full data for training
+var training = samples_no_nulls;
+
+
+
+
+
+print('Training Points (with labels):', trainingPoints.aggregate_histogram('landslide'));
+print('Class Distribution in Sampled Training Data:', trainingData.aggregate_histogram('landslide'));
+print('Training Set Class Distribution:', training.aggregate_histogram('landslide'));
+//print('Evaluation Set Class Distribution:', acurracy_evaluation.aggregate_histogram('landslide'));
+
+//For endYear=2020 put numberOfTrees:360
+//For endYear=2021 put numberOfTrees:80
+//For endYear=2022 put numberOfTrees:179
+//For endYear=2023 put numberOfTrees:55
+// Define the mapping of endYear to numberOfTrees
+//var treeMapping = {
+  //2020: 360,
+  //2021: 80,
+  //2022: 179,
+  //2023: 36 };
 var treeMapping = {
-  2020: 456,  //0.7
-  2021: 133,  //0.7
-  2022: 30,   //0.5
-  2023: 824,  //0.7
-  2024: 62    //0.7
-};
+  2020: 159,
+  2021: 301,
+  2022: 133,
+  2023: 1485 };  
 
-// Add a bagFraction mapping
-var bagFractionMapping = {
-  2020: 0.7,
-  2021: 0.7,
-  2022: 0.5,
-  2023: 0.7,
-  2024: 0.7
-};
-
-// Get the number of trees from the mapping, or default to 100 if not defined
+// Get the number of trees from the mapping, or default to 77 if not defined
 var treeNum = treeMapping[endYear] || 100;
+// Print the chosen number of trees for verification
 print('Number of Trees:', treeNum);
+//random forest
+var rf = ee.Classifier.smileRandomForest({numberOfTrees:treeNum, bagFraction:0.6}).train(training, 'landslide', bandNames)
+.setOutputMode('PROBABILITY');
 
-// Get the bagFraction from the mapping, or default to 0.5 if not defined
-var bagFrac = bagFractionMapping[endYear] || 0.5;
-print('Bag Fraction:', bagFrac);
-
-// Train Random Forest model
-var rf = ee.Classifier.smileRandomForest({numberOfTrees: treeNum, bagFraction: bagFrac})
-  .train(training, 'landslide', bandNames)
-  .setOutputMode('PROBABILITY');
-
-// Create probability mapping
+//probability mapping
 var rfclass = combinedLSMFactors.select(bandNames).classify(rf);
 
 // Add accuracy metrics visualization
 Map.addLayer(rfclass, {min: 0, max: 1, palette: ['white', 'red']}, 'Probability Mapping');
 
-// Create susceptibility classes
+
+// Reclassify the probability output of the LSM into susceptibility levels
+// The ranges are based on landslide susceptibility intensity levels:
+// - 1: Very Low Susceptibility (0.00 - 0.25), color: Dark Green (#008000)
+// - 2: Low Susceptibility (0.25 - 0.5), color: Olive Green (#808000)
+// - 3: Moderate Susceptibility (0.5 - 0.7), color: Yellow (#FFFF00)
+// - 4: High Susceptibility (0.7 - 1.0), color: Red (#FF0000)
 var susceptibility_slices = rfclass.where(rfclass.lt(0.25), 1)    // Very Low - Dark Green
   .where(rfclass.gte(0.25).and(rfclass.lt(0.4)), 2)   // Low - Olive Green
   .where(rfclass.gte(0.4).and(rfclass.lt(0.5)), 3)    // Moderate - Yellow
@@ -1522,8 +1705,9 @@ var susceptibility_slices = rfclass.where(rfclass.lt(0.25), 1)    // Very Low - 
 // Define a color palette corresponding to susceptibility levels
 var palette = ['green', 'lightgreen', 'yellow', 'red'];
 
-// Add the reclassified susceptibility map to the map
+// Add the reclassified susceptibility map to the map, with intensity levels shown by color
 Map.addLayer(susceptibility_slices.clip(wayanad), {min: 1, max: 4, palette: palette}, 'Reclassified Susceptibility Levels');
+
 
 var susceptibility_slices_export = ee.Image(0).where(rfclass.lt(0.25), 1)    // Very Low - Dark Green
   .where(rfclass.gte(0.25).and(rfclass.lt(0.4)), 2)   // Low - Olive Green
@@ -1533,9 +1717,9 @@ var susceptibility_slices_export = ee.Image(0).where(rfclass.lt(0.25), 1)    // 
 // Export the classified image to Google Drive
 Export.image.toDrive({
   image: susceptibility_slices_export,
-  description: 'LSM_Fin3_Susceptibility_Slices_Export_NoSurfSoil'+endYear,
+  description: 'Susceptibility_Slices_Export_NoSurfSoil'+endYear+'_CloudBurst',
   folder: 'Wayanad_Exports', // Change to your desired folder name
-  fileNamePrefix: 'LSM_Fin3_Susceptibility_slices_NoSurfSoil'+endYear,
+  fileNamePrefix: 'susceptibility_slices_NoSurfSoil'+endYear+'_CloudBurst',
   region: geometry, // Adjust as per your region of interest
   scale: 30 // Adjust scale to match your dataset (e.g., 30m for Landsat)
 });
@@ -1586,9 +1770,9 @@ Map.addLayer(rasterizedRegions.clip(wayanad),
 // Step 8: Export the Final Smoothed LSM
 Export.image.toDrive({
   image: rasterizedRegions.clip(wayanad),
-  description: 'LSM_Fin3_Smooth_Region_Based_NoSurfSoil'+endYear,
+  description: 'LSM_Smooth_Region_Based_NoSurfSoil'+endYear+'_CloudBurst',
   folder: 'Wayanad_Exports', // Change to your desired folder name
-  fileNamePrefix: 'LSM_Fin3_Smooth_Region_Based_NoSurfSoil'+endYear,
+  fileNamePrefix: 'LSM_Smooth_Region_Based_NoSurfSoil'+endYear+'_CloudBurst',
   scale: 30,  // Adjusted for less computation
   region: wayanad.geometry(),
   maxPixels: 1e9
@@ -1627,6 +1811,18 @@ var classAreaFeatures = ee.FeatureCollection(classAreas.map(function(item) {
 print('Total Area by Class (Ha):', classAreaFeatures);
 
 
+/*
+Export.table.toDrive({
+  collection: trainingData,
+  description: 'trainingData_export',
+  fileFormat: 'CSV'
+});
+
+*/
+
+
+
+
 
 // Add Exploratory Data Analysis: Histograms
 // Generate histograms for landslide susceptibility scores over the ROI and training samples
@@ -1657,7 +1853,7 @@ var scarHistogram = ui.Chart.image.histogram({
   image: rfclass,
   region: trainingPoints.geometry(),
   scale: 30,
-  maxPixels: 1e13 
+  maxPixels: 1e13
 }).setOptions({
   title: 'Landslide Scar Susceptibility Histogram',
   hAxis: {title: 'Susceptibility'},
@@ -1680,426 +1876,5 @@ var importanceChart = ui.Chart.array.values(importances.values(), 0, importances
 print(importanceChart);
 
 
-
-
-
-//************************************************************************** 
-// Accuracy Assessment
-//************************************************************************** 
-
-/*
-// Convert probabilistic output into a class prediction
-// For binary classification, set a threshold of 0.5
-var rfclassPred = rfclass.gt(0.5).rename('classification');  // For binary
-
-// Sample the prediction and ground truth (from validation set)
-var validationPred = combinedLSMFactors.sampleRegions({
-  collection: acurracy_evaluation,
-  properties: ['landslide']
-  //,scale: 10,
-  //tileScale: 16
-}).map(function(feature) {
-  var predictedClass = rfclassPred.sample({region: feature.geometry(), scale: 10}).first();
-  return feature.set('predicted', predictedClass.get('classification'));
-});
-
-// Now you can create a confusion matrix comparing the predicted and actual values
-var testConfusionMatrix = validationPred.errorMatrix('landslide', 'predicted');
-
-// Print confusion matrix and accuracy
-print('Confusion Matrix', testConfusionMatrix);
-print('Test Accuracy', testConfusionMatrix.accuracy());
-*/
-
-//ROC and AUC
-
-
-// Define target and non-target points based on actual labels
-var FF = acurracy_evaluation.filter(ee.Filter.eq('landslide', 1));  // Landslide points
-var NFF = acurracy_evaluation.filter(ee.Filter.eq('landslide', 0));  // Non-landslide points
-
-// Extract classification probabilities for each point
-var FFrf = rfclass.reduceRegions({
-  collection: FF,
-  reducer: ee.Reducer.max().setOutputs(['classification']),
-  scale: 30
-}).map(function(x) { return x.set('is_target', 1); });
-
-var NFFrf = rfclass.reduceRegions({
-  collection: NFF,
-  reducer: ee.Reducer.max().setOutputs(['classification']),
-  scale: 30
-}).map(function(x) { return x.set('is_target', 0); });
-
-// Combine the results
-var combined = FFrf.merge(NFFrf);
-print('Combined Points:', combined);
-
-// Define parameters for ROC calculation
-var ROC_field = 'classification';
-var ROC_min = 0;
-var ROC_max = 1;
-var ROC_steps = 100;
-
-// Compute ROC points with extended metrics
-var ROC = ee.FeatureCollection(ee.List.sequence(ROC_min, ROC_max, null, ROC_steps).map(function(cutoff) {
-  var target_roc = combined.filter(ee.Filter.eq('is_target', 1)); // Actual positives
-  var non_target_roc = combined.filter(ee.Filter.eq('is_target', 0)); // Actual negatives
-  
-  // True Positive Rate (TPR)
-  var TPR = ee.Number(target_roc.filter(ee.Filter.gte(ROC_field, cutoff)).size())
-    .divide(target_roc.size());
-  
-  // True Negative Rate (TNR)
-  var TNR = ee.Number(non_target_roc.filter(ee.Filter.lt(ROC_field, cutoff)).size())
-    .divide(non_target_roc.size());
-  
-  // False Positive Rate (FPR)
-  var FPR = ee.Number(1).subtract(TNR);
-  
-  // False Negative Rate (FNR)
-  var FNR = ee.Number(1).subtract(TPR);
-  
-  // Distance from perfect classification (0, 1)
-  var dist = TPR.subtract(1).pow(2).add(FPR.pow(2)).sqrt();
-  
-  // Confusion matrix components
-  var TP = target_roc.filter(ee.Filter.gte(ROC_field, cutoff)).size(); // True Positives
-  var FN = target_roc.filter(ee.Filter.lt(ROC_field, cutoff)).size(); // False Negatives
-  var FP = non_target_roc.filter(ee.Filter.gte(ROC_field, cutoff)).size(); // False Positives
-  var TN = non_target_roc.filter(ee.Filter.lt(ROC_field, cutoff)).size(); // True Negatives
-  
-  // Metrics based on confusion matrix
-  var accuracy = ee.Number(TP).add(TN).divide(target_roc.size().add(non_target_roc.size())); // Accuracy
-  var precision = ee.Number(TP).divide(ee.Number(TP).add(FP)); // Precision
-  var recall = TPR; // Recall (same as TPR)
-  var f1_score = ee.Number(2).multiply(precision).multiply(recall)
-    .divide(precision.add(recall)); // F1-Score
-  
-  return ee.Feature(null, {
-    cutoff: cutoff,
-    TPR: TPR,
-    TNR: TNR,
-    FPR: FPR,
-    FNR: FNR,
-    dist: dist,
-    TP: TP,
-    TN: TN,
-    FP: FP,
-    FN: FN,
-    accuracy: accuracy,
-    precision: precision,
-    recall: recall,
-    f1_score: f1_score
-  });
-}));
-
-print('ROC Points with Extended Metrics:', ROC);
-
-// Compute AUC using trapezoidal approximation
-var X = ee.Array(ROC.aggregate_array('FPR'));
-var Y = ee.Array(ROC.aggregate_array('TPR'));
-var X_diff = X.slice(0, 1).subtract(X.slice(0, 0, -1));
-var Y_sum = Y.slice(0, 1).add(Y.slice(0, 0, -1));
-var AUC = X_diff.multiply(Y_sum).multiply(0.5).reduce('sum', [0]).abs();
-print('Area Under Curve (AUC):', AUC);
-
-// Plot the ROC curve
-var ROCChart = ui.Chart.feature.byFeature(ROC, 'FPR', 'TPR')
-  .setOptions({
-    title: 'ROC Curve',
-    hAxis: {title: 'False Positive Rate'},
-    vAxis: {title: 'True Positive Rate'},
-    lineWidth: 2,
-    colors: ['blue']
-  });
-print(ROCChart);
-
-// Find the cutoff with the best distance to (0, 1)
-var ROC_best = ROC.sort('dist').first();
-print('Best ROC Point Cutoff:', ROC_best.get('cutoff'));
-
-// Plot Accuracy Precision Recall and F1-Score
-var AccuracyChart = ui.Chart.feature.byFeature(ROC, 'cutoff', 'accuracy')
-  .setOptions({
-    title: 'Accuracy vs. Cutoff',
-    hAxis: {title: 'Cutoff'},
-    vAxis: {title: 'Accuracy'},
-    lineWidth: 2,
-    colors: ['green']
-  });
-print(AccuracyChart);
-
-var PrecisionChart = ui.Chart.feature.byFeature(ROC, 'cutoff', 'precision')
-  .setOptions({
-    title: 'Precision vs. Cutoff',
-    hAxis: {title: 'Cutoff'},
-    vAxis: {title: 'Precision'},
-    lineWidth: 2,
-    colors: ['green']
-  });
-print(PrecisionChart);
-
-var RecallChart = ui.Chart.feature.byFeature(ROC, 'cutoff', 'recall')
-  .setOptions({
-    title: 'Recall vs. Cutoff',
-    hAxis: {title: 'Cutoff'},
-    vAxis: {title: 'Recall'},
-    lineWidth: 2,
-    colors: ['green']
-  });
-print(RecallChart);
-
-var F1Chart = ui.Chart.feature.byFeature(ROC, 'cutoff', 'f1_score')
-  .setOptions({
-    title: 'F1-Score vs. Cutoff',
-    hAxis: {title: 'Cutoff'},
-    vAxis: {title: 'F1-Score'},
-    lineWidth: 2,
-    colors: ['purple']
-  });
-print(F1Chart);
-
-
-
-
-
-var treeMapping = {
-  2020: 50,  //0.7
-  2021: 30,  //0.7
-  2022: 34,   //0.5
-  2023: 495,  //0.7
-  2024: 56    //0.7
-};
-
-// Add a bagFraction mapping
-var bagFractionMapping = {
-  2020: 0.6,
-  2021: 0.6,
-  2022: 0.5,
-  2023: 0.5,
-  2024: 0.7
-};
-
-// Get the number of trees and bag fraction from the mappings, or use defaults
-var nmbTrees = treeMapping[endYear] || 100; // Default number of trees
-var bgFraction = bagFractionMapping[endYear] || 0.6; // Default bag fraction
-
-// Print the chosen parameters for verification
-print('Number of Trees:', nmbTrees);
-print('Bag Fraction:', bgFraction);
-
-// Random Forest Classifier without Probabilistic Output Mode
-var rfConfusion = ee.Classifier.smileRandomForest({
-  numberOfTrees: nmbTrees,
-  bagFraction: bgFraction
-}).train(training, 'landslide', bandNames);
-
-// Classify the accuracy evaluation dataset
-var validation = acurracy_evaluation.classify(rfConfusion);
-
-// Create a confusion matrix
-var confusionMatrix = validation.errorMatrix('landslide', 'classification');
-
-// Print the confusion matrix
-print('Confusion Matrix using separate RF without Probabilistic Output Mode', confusionMatrix);
-
-// Extract metrics
-var accuracy = confusionMatrix.accuracy();
-// Print metrics
-print('Accuracy using separate RF without Probabilistic Output Mode:', accuracy);
-
-// Extract confusion matrix elements
-var matrix = confusionMatrix.array();
-var TP = ee.Number(matrix.get([0, 0])); // True Positives
-var TN = ee.Number(matrix.get([1, 1])); // True Negatives
-var FP = ee.Number(matrix.get([0, 1])); // False Positives
-var FN = ee.Number(matrix.get([1, 0])); // False Negatives
-
-// Calculate additional metrics
-var accurcy = (TP.add(TN)).divide(TP.add(TN).add(FP).add(FN))
-var recall = TP.divide(TP.add(FN)); // Sensitivity/Recall
-var precision = TP.divide(TP.add(FP)); // Precision
-var specificity = TN.divide(TN.add(FP)); // Specificity
-var negativePredictiveValue = TN.divide(TN.add(FN)); // Negative Predictive Value
-var f1Score = precision.multiply(recall).multiply(2).divide(precision.add(recall)); // F1 Score
-
-// Print additional metrics
-print('Accuracy (formula used):', accurcy);
-print('Recall (Sensitivity):', recall);
-print('Precision:', precision);
-print('Specificity:', specificity);
-print('Negative Predictive Value (NPV):', negativePredictiveValue);
-print('F1 Score:', f1Score);
-
-// Extract the array representation of the confusion matrix
-var array = confusionMatrix.array();
-var rowsCount = array.length().get([0]); // Extract the row count
-
-// Convert confusion matrix to a FeatureCollection for export
-var rows = ee.List.sequence(0, rowsCount.subtract(1)).map(function(i) {
-  var row = array.slice(0, i, ee.Number(i).add(1)).project([1]);
-  return ee.Feature(null, {
-    'row_index': i,
-    'values': row.toList()
-  });
-});
-
-// Convert to FeatureCollection
-var confusionFeatureCollection = ee.FeatureCollection(rows);
-
-// Export to Google Drive as CSV
-Export.table.toDrive({
-  collection: confusionFeatureCollection,
-  description: 'ConfusionMatrix_Export_NoSurfSoil_RF_Fin3_' + endYear,
-  folder: 'Wayanad_Exports',
-  fileNamePrefix: 'ConfusionMatrix_Normal_NoSurfSoil_RF_Fin3_' + endYear,
-  fileFormat: 'CSV'
-});
-
-
-
-
-
-
-
-
-
-// Add this snippet at the end of your GEE code
-// ADD THE FOLLOWING LINE:
-var combinedLSMFactors_unmasked_SHAP = combinedLSMFactors.unmask(0);
-var trainingDataHistorical_SHAP = combinedLSMFactors_unmasked_SHAP.reduceRegions({
-  collection: trainingPoints,
-  reducer: ee.Reducer.mean(),
-  scale: 30
-});
-
-var trainingDataClean_SHAP = trainingDataHistorical_SHAP.randomColumn('random');
-var trainingDataNoNulls_SHAP = trainingDataClean_SHAP.filter(ee.Filter.notNull(['landslide']));
-
-// This is the variable holding all your features and the 'landslide' label
-// It's ready for export.
-print('Preview of data to be exported:', trainingDataNoNulls_SHAP.limit(5));
-
-// Export the FeatureCollection to a CSV file in your Google Drive.
-Export.table.toDrive({
-  collection: trainingDataNoNulls_SHAP,
-  description: 'LSM_Training_Data_for_SHAP_'+endYear,
-  folder: 'Wayanad_Exports', // Optional: specify a folder
-  fileNamePrefix: 'lsm_training_data_SHAP_'+endYear,
-  fileFormat: 'CSV'
-});
-
-// IMPORTANT: Before running the export, print your band names.
-// You will need this exact list in your Python script.
-var bandNames = combinedLSMFactors_unmasked_SHAP.bandNames();
-print('COPY THESE BAND NAMES FOR PYTHON:', bandNames);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//**************************************************************************
-// ADDITIONAL EVALUATION: Conventional split vs. target-year forward test
-// Uses the SAME trained model (rfclass). Nothing above is modified.
-//**************************************************************************
-
-// ---- Reusable ROC/AUC function ----
-function evaluateROC(collection, tagName) {
-  var pos = collection.filter(ee.Filter.eq('landslide', 1));
-  var neg = collection.filter(ee.Filter.eq('landslide', 0));
-
-  var posScored = rfclass.reduceRegions({
-    collection: pos,
-    reducer: ee.Reducer.max().setOutputs(['classification']),
-    scale: 30
-  }).map(function(x) { return x.set('is_target', 1); });
-
-  var negScored = rfclass.reduceRegions({
-    collection: neg,
-    reducer: ee.Reducer.max().setOutputs(['classification']),
-    scale: 30
-  }).map(function(x) { return x.set('is_target', 0); });
-
-  var comb = posScored.merge(negScored);
-  
-  Export.table.toDrive({
-    collection: comb.select(['classification', 'is_target', 'Year']),
-    description: 'scored_' + tagName + '_' + endYear,
-    fileFormat: 'CSV'
-  });
-
-  var roc = ee.FeatureCollection(ee.List.sequence(0, 1, null, 100).map(function(cutoff) {
-    var t = comb.filter(ee.Filter.eq('is_target', 1));
-    var n = comb.filter(ee.Filter.eq('is_target', 0));
-    var TPR = ee.Number(t.filter(ee.Filter.gte('classification', cutoff)).size()).divide(t.size());
-    var TNR = ee.Number(n.filter(ee.Filter.lt('classification', cutoff)).size()).divide(n.size());
-    var FPR = ee.Number(1).subtract(TNR);
-    var TP = t.filter(ee.Filter.gte('classification', cutoff)).size();
-    var FN = t.filter(ee.Filter.lt('classification', cutoff)).size();
-    var FP = n.filter(ee.Filter.gte('classification', cutoff)).size();
-    var TN = n.filter(ee.Filter.lt('classification', cutoff)).size();
-    var accuracy  = ee.Number(TP).add(TN).divide(t.size().add(n.size()));
-    var precision = ee.Number(TP).divide(ee.Number(TP).add(FP));
-    var f1 = ee.Number(2).multiply(precision).multiply(TPR).divide(precision.add(TPR));
-    return ee.Feature(null, {
-      set: tagName, year: endYear, cutoff: cutoff,
-      TPR: TPR, FPR: FPR,
-      dist: TPR.subtract(1).pow(2).add(FPR.pow(2)).sqrt(),
-      TP: TP, TN: TN, FP: FP, FN: FN,
-      accuracy: accuracy, precision: precision, recall: TPR, f1_score: f1
-    });
-  }));
-
-  var X = ee.Array(roc.aggregate_array('FPR'));
-  var Y = ee.Array(roc.aggregate_array('TPR'));
-  var auc = X.slice(0, 1).subtract(X.slice(0, 0, -1))
-             .multiply(Y.slice(0, 1).add(Y.slice(0, 0, -1)))
-             .multiply(0.5).reduce('sum', [0]).abs();
-
-  print('--- ' + tagName + ' (' + endYear + ') ---');
-  print('   Positives:', pos.size(), ' Negatives:', neg.size());
-  print('   AUC:', auc);
-  print(ui.Chart.feature.byFeature(roc, 'FPR', 'TPR').setOptions({
-    title: 'ROC: ' + tagName + ' (' + endYear + ')',
-    hAxis: {title: 'False Positive Rate'},
-    vAxis: {title: 'True Positive Rate'},
-    lineWidth: 2
-  }));
-  return roc;
-}
-
-// ---- Bag A: conventional random 30% split (both classes, historical only) ----
-var bagA = testingHistorical;
-
-// ---- Bag B: target-year landslides + held-out non-landslide points ----
-var heldOutNegatives = testingHistorical.filter(ee.Filter.eq('landslide', 0));
-var bagB = currentYearDataClean.merge(heldOutNegatives);
-
-var rocA = evaluateROC(bagA, 'A_conventional');
-var rocB = evaluateROC(bagB, 'B_targetyear');
-
-// ---- Export both ROC tables so you can plot one combined figure ----
-Export.table.toDrive({
-  collection: rocA.merge(rocB),
-  description: 'ROC_comparison_' + endYear,
-  fileFormat: 'CSV'
-});
 
 
