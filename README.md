@@ -1,10 +1,10 @@
-# Dual-Phase Framework for LSM
- A Dual-Phase Framework for Static and Dynamic Spatiotemporal Prediction of Landslides using a Temporally Consistent Ensemble Model
+# Year-Wise Refitting Framework for LSM
+ A Year-Wise Refitting Framework for Static and Dynamic Spatiotemporal Prediction of Landslides using a Temporally Consistent Ensemble Model
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20205386.svg)](https://doi.org/10.5281/zenodo.20205386)
 
 ## Overview
-This repository contains the code, processing protocols, and datasets necessary to reproduce the Landslide Susceptibility Mapping (LSM) results presented in the manuscript: *"A Dual-Phase Framework for Static and Dynamic Spatiotemporal Prediction of Landslides using a Temporally Consistent Ensemble Model"*. 
+This repository contains the code, processing protocols, and datasets necessary to reproduce the Landslide Susceptibility Mapping (LSM) results presented in the manuscript: *"A Year-Wise Refitting Framework for Static and Dynamic Spatiotemporal Prediction of Landslides using a Temporally Consistent Ensemble Model"*. 
 
 The workflow integrates multi-temporal remote sensing data processing via Google Earth Engine (GEE), QGIS, and Python, followed by predictive modeling using BiLSTM (for temporal dynamic factors) and Random Forest (for spatial susceptibility classification).
 
